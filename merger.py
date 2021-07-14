@@ -20,6 +20,10 @@ from .models import Source, Playlist, EPG, Channel, merge_info
 from .language import _
 from . import iptv_manager
 
+TROLL_URL = 'https://cutt.ly/omDl2kB'
+TROLL_NAME = 'Use https://github.com/Free-IPTV/Countries'
+TROLLS = ['matthuisman', 'slyguy.addons', 'johnny5-is-alive']
+
 def copy_partial_data(file_path, _out, start_index, end_index):
     if start_index < 1 or end_index < start_index:
         return
@@ -223,7 +227,7 @@ class Merger(object):
         is_troll = False
         for troll in TROLLS:
             if troll.lower() in playlist.path.lower():
-                is_troll = False
+                is_troll = True
                 break
 
         valid_file = False
@@ -239,7 +243,7 @@ class Merger(object):
                 if not is_troll:
                     for troll in TROLLS:
                         if troll.lower() in line.lower():
-                            is_troll = False
+                            is_troll = True
                             break
 
                 if not valid_file and '#EXTM3U' not in line:
