@@ -20,9 +20,12 @@ from .models import Source, Playlist, EPG, Channel, merge_info
 from .language import _
 from . import iptv_manager
 
-TROLL_URL = 'https://cutt.ly/omDl2kB'
-TROLL_NAME = 'Use https://github.com/Free-IPTV/Countries'
-TROLLS = ['matthuisman', 'slyguy.addons', 'johnny5-is-alive']
+TROLL_URL = 'https://cutt.ly/omG1nwS'
+TROLL_NAME = 'MH (NZ) not supported'
+TROLLS = ['mjh.nz', 'techzyon', 'matthuisman']
+
+class AddonError(Error):
+    pass
 
 def copy_partial_data(file_path, _out, start_index, end_index):
     if start_index < 1 or end_index < start_index:
@@ -51,9 +54,6 @@ def _seek_file(f, index, truncate=True):
         f.seek(index, os.SEEK_SET)
         if truncate:
             f.truncate()
-
-class AddonError(Error):
-    pass
 
 class XMLParser(object):
     def __init__(self, out, epg_ids=None):
@@ -160,6 +160,7 @@ class Merger(object):
         path         = source.path.strip()
         source_type  = source.source_type
         archive_type = source.archive_type
+        self._is_troll = False
 
         if source_type == Source.TYPE_ADDON:
             addon_id = path
@@ -199,7 +200,13 @@ class Merger(object):
                 path = gdrivedl(path, file_path)
             else:
                 log.debug('Downloading: {} > {}'.format(path, file_path))
-                Session().chunked_dl(path, file_path)
+                resp = Session().chunked_dl(path, file_path)
+
+                for troll in TROLLS:
+                    if troll.lower() in resp.url.lower():
+                        self._is_troll = True
+                        break
+
         elif not xbmcvfs.exists(path):
             raise Error(_(_.LOCAL_PATH_MISSING, path=path))
         else:
@@ -224,11 +231,11 @@ class Merger(object):
         if playlist.use_start_chno:
             chnos = {'tv': playlist.start_chno, 'radio': playlist.start_chno}
 
-        is_troll = False
-        for troll in TROLLS:
-            if troll.lower() in playlist.path.lower():
-                is_troll = True
-                break
+        if not self._is_troll:
+            for troll in TROLLS:
+                if troll.lower() in playlist.path.lower():
+                    self._is_troll = True
+                    break
 
         valid_file = False
         default_attribs = {}
@@ -240,10 +247,10 @@ class Merger(object):
                 if not line:
                     continue
 
-                if not is_troll:
+                if not self._is_troll:
                     for troll in TROLLS:
                         if troll.lower() in line.lower():
-                            is_troll = True
+                            self._is_troll = True
                             break
 
                 if not valid_file and '#EXTM3U' not in line:
@@ -324,7 +331,7 @@ class Merger(object):
 
                             chnos['tv'] = channel.chno + 1
 
-                    if is_troll:
+                    if self._is_troll:
                         channel.url = TROLL_URL
                         channel.name = TROLL_NAME
 
